@@ -6,6 +6,8 @@ from tastypie.utils import trailing_slash
 from django.conf.urls import url
 from django.db.models import Q
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
+from tastypie.validation import Validation
+
 
 from movies.models import Movie
 from movies.models import Director
@@ -22,6 +24,7 @@ class DirectorResource(ModelResource):
         resource_name = 'director'
         authentication = BasicAuthentication()
         authorization = DjangoAuthorization()
+        always_return_data = True
 
 
 class GenreResource(ModelResource):
@@ -34,8 +37,28 @@ class GenreResource(ModelResource):
         filtering = {
             "name": ["iexact"]
         }
+        always_return_data = True
 
     #TODO: Remove details method
+
+
+class MovieValidator(Validation):
+    """
+    Validates the field for movie
+    """
+    def is_valid(self, bundle, request=None):
+
+        errors = {}
+
+        if 'imdb_score' in bundle.data:
+            if bundle.data['imdb_score'] > 10:
+                errors['imdb_score'] = "Imdb score cannot be greater than 10"
+
+        if 'popularity_99' in bundle.data:
+            if bundle.data['popularity_99'] > 99:
+                errors['popularity_99'] = "Popularity cannot be greater than 99"
+
+        return errors
 
 
 class MovieResource(ModelResource):
@@ -53,6 +76,10 @@ class MovieResource(ModelResource):
             "name": ["icontains", "istartswith"],
             "genre": ALL_WITH_RELATIONS
         }
+        validation = MovieValidator()
+
+        #TODO: Restrict allowed methods according to user types
+
 
     def prepend_urls(self):
         return [
